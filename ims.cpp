@@ -50,6 +50,7 @@ int lz_tank_p;
 
 /* hlavne suroviny */
 int slad = 100;           // vstupna
+int zly_slad = 0;
 int pomlety_slad = 0;
 int vystierka = 0;
 int rmut = 0;
@@ -220,6 +221,7 @@ class Vystierka : public Process {
 
 class Slad : public Process {
     public : Slad() : Process(1) {}
+    long int cas;
     
     /* m = 100 kg */
     void Behavior() {
@@ -232,8 +234,15 @@ class Slad : public Process {
         Leave(Mlyn, 100);
 
         /* vstup do kotla */
-        voda -= 700;
+        cas = Time;
+        voda += 700;
         Enter(Kotol, 800);
+        printf("POCET PROCESOV KOTOL V RADE KOTOL:%d\n",Kotol.QueueLen());
+        if(Time - cas > (3 MES)) {
+            /* pomletý slad sa pokazil */
+            zly_slad += Kotol.QueueLen() * 100;
+            Terminate();
+        }
 
         Wait(15 MIN);
         (new Vystierka)->Activate();
@@ -324,7 +333,10 @@ int main(int argc, char *argv[])//int argc, char const *argv[])
     // nejake vypisy jeble
     Print("Vysledky:\n");
     Print("Leziak 10: %dl\n",leziak10);
-    Print("Leziak 12: %dl",leziak12);
+    Print("Leziak 12: %dl\n",leziak12);
+    Print("Mlato: %dkg\n",mlato);
+    Print("Spotreba vody: %dkg\n",voda);
+    Print("Pokazeny slad: %dkg\n",zly_slad);
     //free(vystup.c_str());
 
     return 0;
