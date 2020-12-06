@@ -7,6 +7,9 @@
 #include <stdlib.h>
 #include <iostream>
 #include "simlib.h"
+#include <unistd.h>
+#include <string>
+
 
 /* konstanty */
 #define MIN *1
@@ -28,6 +31,14 @@ Store O_kad("Odstrediva Kad",800);
 Store Panev("Mladinova panev",800);
 Store KV_tank("Kvasny tank",5 * KAPACITA_KV_TANKU);
 Store LZ_tank("Leziacky tank",6 * KAPACITA_LZ_TANKU);
+
+/* pocty zariadeni */
+int kotol_p;
+int s_kad_p;
+int o_kad_p;
+int panev_p;
+int kv_tank_p;
+int lz_tank_p;
 
 /* hlavne suroviny */
 int slad = 0;           // vstupna
@@ -57,7 +68,6 @@ class ZelenePivo : public Process {
     /* m = 600 kg */
     void Behavior() {
         Enter(LZ_tank, 600);
-
         if(typ10) {
             Wait(10 TYZ);
         } else {
@@ -68,9 +78,17 @@ class ZelenePivo : public Process {
             /* varka je kontaminovaná */
             Terminate();
         }
-
+        if(typ10){
+            leziak10 += 600;
+            
+        } else {
+            leziak12 += 600;
+            
+        }
         Leave(KV_tank, 600);
+        
     }
+    
 };
 
 class KvasnaMladina : public Process {
@@ -165,6 +183,7 @@ class Vystierka : public Process {
 class Slad : public Process {
     /* m = 100 kg */
     void Behavior() {
+
         /* pomletie */
         Enter(Mlyn, 100);
 
@@ -183,30 +202,67 @@ class Slad : public Process {
     }
 };
 
-
-int main()//int argc, char const *argv[])
-{
-    char *vystup = "output";
-    int doba_behu = 1 MES;
-    
-    //parse args
-    
-    //SetOutput(vystup);
-    
-    RandomSeed(time(NULL));
-    //Init(0, doba_behu);
-
-    // alebo nejaky iny spustac
-    while(slad >= 100) {
-        slad -= 100;
+class Start : public Event {
+    void Behavior(){
         (new Slad)->Activate();
+        Activate(Time);
     }
+};
 
-    //Run();
+
+int main(int argc, char *argv[])//int argc, char const *argv[])
+{
+    string vystup = "output.out";
+    int doba_behu = 1 TYZ;
+    int c;
+    //parse args
+    while ((c = getopt (argc, argv, "M:K:S:O:P:k:l")) != -1) 
+	{
+		switch (c)
+		{
+			case 'M':
+				Mlyn.SetCapacity(atoi(optarg));
+				break;
+            case 'K':
+                kotol_p = atoi(optarg);
+                break;
+            case 'S':
+                s_kad_p = atoi(optarg);
+                break;
+            case 'O':
+                o_kad_p = atoi(optarg);
+                break;
+            case 'P':
+                panev_p = atoi(optarg);
+                break;
+            case 'k':
+                kv_tank_p = atoi(optarg);
+                break;
+            case 'l':
+                lz_tank_p = atoi(optarg);
+                break;
+			default:
+				break;
+		}
+	}
+
+    
+    
+    SetOutput(vystup.c_str());
+
+    RandomSeed(time(NULL));
+
+    Init(0, doba_behu);
+    
+    (new Start)->Activate();
+
+    Run();
 
     // nejake vypisy jeble
-
-    free(vystup);
+    Print("Vysledky:\n");
+    Print("Leziak 10: %dl\n",leziak10);
+    Print("Leziak 12: %dl",leziak12);
+    //free(vystup.c_str());
 
     return 0;
 }
