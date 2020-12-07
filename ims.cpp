@@ -29,6 +29,7 @@
 #define SANCA_NA_KONTAMINACIU 0.001
 
 bool verbose = false;   // for debug purposes
+double init_chmel;
 
 /* zariadenia */
 Store Mlyn("Mlyn", KAPACITA_MLYNU);
@@ -40,17 +41,16 @@ Store KV_tank("Kvasny tank", 5 * KAPACITA_KV_TANKU);
 Store LZ_tank("Leziacky tank", 6 * KAPACITA_LZ_TANKU);
 
 /* pocty zariadeni */
-int mlyn_p;
-int kotol_p;
-int s_kad_p;
-int o_kad_p;
-int panev_p;
-int kv_tank_p;
-int lz_tank_p;
+int mlyn_p = 1;
+int kotol_p = 1;
+int s_kad_p = 1;
+int o_kad_p = 1;
+int panev_p = 1;
+int kv_tank_p = 5;
+int lz_tank_p = 6;
 
 /* hlavne suroviny */
 int slad = 100;           // vstupna
-int zly_slad = 0;
 int pomlety_slad = 0;
 int vystierka = 0;
 int rmut = 0;
@@ -64,12 +64,14 @@ bool typ10 = true;
 
 /* vedlajsie suroviny */
 int voda = 0;           // vstupna
-double chmel = 0;       // vstupna
+double chmel = 2;       // vstupna
 int kvasnice = 0;       // vstupna
 
 /* odpad */
 int mlato = 0;
 int kal = 0;
+int zly_slad = 0;
+int kontam_pivo = 0;
 
 using namespace std;
 
@@ -98,6 +100,7 @@ class ZelenePivo : public Process {
 
         if(Random() <= SANCA_NA_KONTAMINACIU) {
             /* varka je kontaminovaná */
+            kontam_pivo += 600;
             Terminate();
         }
         if(robim){
@@ -120,13 +123,14 @@ class KvasnaMladina : public Process {
     /* m = 200 kg */
     void Behavior() {
         printf("Som v KVMLAD\n");
-        kvasnice -= 1;
+        kvasnice += 1;
         Enter(KV_tank, 200);
 
         Wait(10 DEN);
         
         if(Random() <= SANCA_NA_KONTAMINACIU) {
             /* varka je kontaminovana */
+            kontam_pivo += 200;
             Terminate();
         }
         z_pivo += 200;
@@ -269,14 +273,20 @@ class Start : public Event {
 
 int main(int argc, char *argv[])//int argc, char const *argv[])
 {
-    string vystup = "output.out";
+    string vystup = "result.md";
     int doba_behu = 12 MES;
     int c;
     //parse args
-    while ((c = getopt (argc, argv, "s:M:K:S:O:P:k:l:v")) != -1) 
+    while ((c = getopt (argc, argv, "o:c:s:M:K:S:O:P:k:l:v")) != -1) 
 	{
 		switch (c)
 		{
+            case 'o':
+                vystup = optarg;
+                break;
+            case 'c':
+                chmel = atoi(optarg);
+                break;
             case 's':
                 slad = atoi(optarg);
                 break;
@@ -315,9 +325,9 @@ int main(int argc, char *argv[])//int argc, char const *argv[])
 				break;
 		}
 	}
+    
+    init_chmel = chmel;
 
-    
-    
     SetOutput(vystup.c_str());
 
     RandomSeed(time(NULL));
@@ -330,13 +340,42 @@ int main(int argc, char *argv[])//int argc, char const *argv[])
 
     Run();
 
-    // nejake vypisy jeble
-    Print("Vysledky:\n");
-    Print("Leziak 10: %dl\n",leziak10);
-    Print("Leziak 12: %dl\n",leziak12);
-    Print("Mlato: %dkg\n",mlato);
-    Print("Spotreba vody: %dkg\n",voda);
-    Print("Pokazeny slad: %dkg\n",zly_slad);
+    Print("# Vysledky:\n");
+    Print("## Pocet zariadeni a ich kapacita v kg:\n");
+    Print("Zariadenie | Pocet | Kapacita\n");
+    Print(":--- | :---: | ---:\n");
+    Print("Mlyn:             | %d | %d kg\n", mlyn_p, KAPACITA_MLYNU);
+    Print("Varný kotol:      | %d | %d kg\n", kotol_p, KAPACITA_KOTLU);
+    Print("Scedovacia kad:   | %d | %d kg\n", s_kad_p, KAPACITA_S_KADE);
+    Print("Odstrediva kad:   | %d | %d kg\n", o_kad_p, KAPACITA_O_KADE);
+    Print("Mladinova panev:  | %d | %d kg\n", panev_p, KAPACITA_PANVE);
+    Print("Kvasny tank:      | %d | %d kg\n", kv_tank_p, KAPACITA_KV_TANKU);
+    Print("Leziacky tank:    | %d | %d kg\n---\n", lz_tank_p, KAPACITA_LZ_TANKU);
+    Print("## Vstupne suroviny:\n");
+    Print("Surovina | Hmotnost\n");
+    Print(":--- | ---:\n");
+    Print("Slad:  | %d kg\n", slad);
+    Print("Chmel: | %.2f kg\n---\n", init_chmel);
+    Print("## Spotrebované suroviny: \n");
+    Print("Surovina | Hmotnost\n");
+    Print(":--- | ---:\n");
+    Print("Slad:  | %d kg\n", slad - start->m);
+    Print("Chmel: | %.2f kg\n", init_chmel - chmel);
+    Print("Voda:     | %d l\n", voda);
+    Print("Kvasnice: | %d l\n---\n", kvasnice);
+    Print("## Medziprodukty a odpad: \n");
+    Print("Typ | Hmotnost\n");
+    Print(":--- | ---:\n");
+    Print("Mlato:                | %d kg\n", mlato);
+    Print("Kal:                  | %d kg\n", kal);
+    Print("Pokazeý slad:         | %d kg\n", zly_slad);
+    Print("Kontaminovane pivo:   | %d kg\n---\n", kontam_pivo);
+    Print("## Vyrobené pivo:\n");
+    Print("Typ | Hmotnost\n");
+    Print(":--- | ---:\n");
+    Print("Vycap 10:  | %d l\n",leziak10);
+    Print("Leziak 12: | %d l\n",leziak12);
+    
     //free(vystup.c_str());
 
     return 0;
