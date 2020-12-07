@@ -4,29 +4,9 @@
  * Martin Hiner - xhiner00
  */
 
-#include <stdlib.h>
-#include <iostream>
-#include "simlib.h"
-#include <unistd.h>
-#include <string>
+#include "ims.h"
 
-
-/* konstanty */
-#define MIN *1
-#define HOD MIN*60
-#define DEN HOD*24
-#define TYZ DEN*7
-#define MES TYZ*4
-
-#define KAPACITA_MLYNU      100
-#define KAPACITA_KOTLU      800
-#define KAPACITA_S_KADE     800
-#define KAPACITA_O_KADE     800
-#define KAPACITA_PANVE      800
-#define KAPACITA_KV_TANKU   200
-#define KAPACITA_LZ_TANKU   600
-
-#define SANCA_NA_KONTAMINACIU 0.001
+auto s = new Stats;
 
 bool verbose = false;   // for debug purposes
 double init_chmel;
@@ -61,6 +41,8 @@ int leziak10 = 0;
 int leziak12 = 0;
 
 bool typ10 = true;
+bool neni_chmel = false;
+long int cas_vyroby;
 
 /* vedlajsie suroviny */
 int voda = 0;           // vstupna
@@ -88,7 +70,7 @@ class Lezanie : public Process {
 
     /* m = 600 kg */
     void Behavior() {
-        printf("Som v Pive\n");
+        s->lz_tank.update(LZ_tank.QueueLen());
         Enter(LZ_tank, 600);
         robim = typ10;
         typ10 = !typ10;     // zmena vyroby
@@ -103,6 +85,7 @@ class Lezanie : public Process {
             kontam_pivo += 600;
             Terminate();
         }
+        cas_vyroby = Time;
         if(robim){
             leziak10 += 600;
             
@@ -112,7 +95,6 @@ class Lezanie : public Process {
         }
 
         Leave(LZ_tank, 600);
-        printf("Zrobil som 600l piva\n");
     }
     
 };
@@ -122,8 +104,9 @@ class Kvasenie : public Process {
     
     /* m = 200 kg */
     void Behavior() {
-        printf("Som v KVMLAD\n");
         kvasnice += 1;
+        s->kv_tank.update(KV_tank.QueueLen());
+
         Enter(KV_tank, 200);
 
         Wait(10 DEN);
@@ -136,7 +119,6 @@ class Kvasenie : public Process {
         z_pivo += 200;
 
         /* ak je dostatocne mnozstvo napln LZ_tank */
-        printf("Z_PIVO: %d\n", z_pivo);
         while(z_pivo >= 600) {
             z_pivo -= 600;
             (new Lezanie)->Activate();
@@ -151,8 +133,9 @@ class Chladenie : public Process {
     
     /* m = 680 kg */
     void Behavior() {
-        printf("Som v Mladine\n");
         /* cistenie */
+        s->o_kad.update(O_kad.QueueLen());
+
         Enter(O_kad, 680);
         
         Wait(1 HOD);
@@ -178,7 +161,16 @@ class Chmelovar : public Process {
     /* m = 680 kg */
     void Behavior() {
         log("Chmelovar");
-        chmel -= 1.36;
+        if(chmel >= 1.36) {
+            chmel -= 1.36;
+        } else {
+            /* nedostatok chmelu */
+            neni_chmel = true;
+            Terminate();
+        }
+        
+        s->panev.update(Panev.QueueLen());
+
         Enter(Panev, 680);
 
         Wait(2.5 HOD);
@@ -198,6 +190,7 @@ class Scedzovanie : public Process {
         Wait(30 MIN);
 
         /* scedenie */
+        s->s_kad.update(S_kad.QueueLen());
         Enter(S_kad, 800);
 
         Wait(3.5 HOD);
@@ -214,6 +207,8 @@ class Rmutovanie : public Process {
     /* m = 800 kg */
     void Behavior() {
         log("Rmutovanie");
+        s->kotol.update(Kotol.QueueLen());
+
         Enter(Kotol, 800);
 
         Wait(Uniform(5 HOD,5.5 HOD));
@@ -231,6 +226,8 @@ class Slad : public Process {
     void Behavior() {
         log("Slad");
         /* pomletie */
+        s->mlyn.update(Mlyn.QueueLen());
+
         Enter(Mlyn, 100);
 
         Wait(Uniform(5 MIN,8 MIN));
@@ -240,11 +237,12 @@ class Slad : public Process {
         /* vstup do kotla */
         cas = Time;
         voda += 700;
+        s->kotol.update(Kotol.QueueLen());
+
         Enter(Kotol, 800);
-        printf("POCET PROCESOV KOTOL V RADE KOTOL:%d\n",Kotol.QueueLen());
         if(Time - cas > (3 MES)) {
             /* pomletý slad sa pokazil */
-            zly_slad += Kotol.QueueLen() * 100;
+            zly_slad += 100;
             Terminate();
         }
 
@@ -274,48 +272,52 @@ class Start : public Event {
 int main(int argc, char *argv[])//int argc, char const *argv[])
 {
     string vystup = "result.md";
+    string title = "";
     int doba_behu = 12 MES;
     int c;
     //parse args
-    while ((c = getopt (argc, argv, "o:c:s:M:K:S:O:P:k:l:v")) != -1) 
+    while ((c = getopt (argc, argv, "o:t:c:s:M:K:S:O:P:k:l:v")) != -1) 
 	{
 		switch (c)
 		{
             case 'o':
                 vystup = optarg;
                 break;
+            case 't':
+                title = optarg;
+                break;
             case 'c':
-                chmel = atoi(optarg);
+                chmel = atof(optarg);
                 break;
             case 's':
-                slad = atoi(optarg);
+                slad = atof(optarg);
                 break;
 			case 'M':
-                mlyn_p = atoi(optarg);
+                mlyn_p = atof(optarg);
 				Mlyn.SetCapacity(KAPACITA_MLYNU * mlyn_p);
 				break;
             case 'K':
-                kotol_p = atoi(optarg);
+                kotol_p = atof(optarg);
                 Kotol.SetCapacity(KAPACITA_KOTLU * kotol_p);
                 break;
             case 'S':
-                s_kad_p = atoi(optarg);
+                s_kad_p = atof(optarg);
                 S_kad.SetCapacity(KAPACITA_S_KADE * s_kad_p);
                 break;
             case 'O':
-                o_kad_p = atoi(optarg);
+                o_kad_p = atof(optarg);
                 O_kad.SetCapacity(KAPACITA_O_KADE * o_kad_p);
                 break;
             case 'P':
-                panev_p = atoi(optarg);
+                panev_p = atof(optarg);
                 Panev.SetCapacity(KAPACITA_PANVE * panev_p);
                 break;
             case 'k':
-                kv_tank_p = atoi(optarg);
+                kv_tank_p = atof(optarg);
                 KV_tank.SetCapacity(KAPACITA_KV_TANKU * kv_tank_p);
                 break;
             case 'l':
-                lz_tank_p = atoi(optarg);
+                lz_tank_p = atof(optarg);
                 LZ_tank.SetCapacity(KAPACITA_LZ_TANKU * lz_tank_p);
                 break;
             case 'v':
@@ -340,43 +342,57 @@ int main(int argc, char *argv[])//int argc, char const *argv[])
 
     Run();
 
-    Print("# Vysledky:\n");
-    Print("## Informacie o zariadeniach:\n");
-    Print("Zariadenie | Pocet | Kapacita | Rada\n");
-    Print(":--- | :---: | :---: | ---:\n");
-    Print("Mlyn:             | %d | %d kg | %d\n", mlyn_p, KAPACITA_MLYNU, Mlyn.QueueLen());
-    Print("Varný kotol:      | %d | %d kg | %d\n", kotol_p, KAPACITA_KOTLU, Kotol.QueueLen());
-    Print("Scedovacia kad:   | %d | %d kg | %d\n", s_kad_p, KAPACITA_S_KADE, S_kad.QueueLen());
-    Print("Odstrediva kad:   | %d | %d kg | %d\n", o_kad_p, KAPACITA_O_KADE, O_kad.QueueLen());
-    Print("Mladinova panev:  | %d | %d kg | %d\n", panev_p, KAPACITA_PANVE, Panev.QueueLen());
-    Print("Kvasny tank:      | %d | %d kg | %d\n", kv_tank_p, KAPACITA_KV_TANKU, KV_tank.QueueLen());
-    Print("Leziacky tank:    | %d | %d kg | %d\n---\n", lz_tank_p, KAPACITA_LZ_TANKU, LZ_tank.QueueLen());
-    Print("## Vstupne suroviny:\n");
+    Print("# %s\n", title.c_str());
+    Print("## Vysledky:\n");
+    Print("### Informacie o zariadeniach:\n");
+    Print("Zariadenie | Pocet | Kapacita | Max rada | Priemerna rada\n");
+    Print(":--- | :---: | :---: | ---: | ---:\n");
+    Print("Mlyn:             | %d | %d kg | %d | %.2f\n", mlyn_p, KAPACITA_MLYNU, s->mlyn.get_max(), s->mlyn.get_avg());
+    Print("Varný kotol:      | %d | %d kg | %d | %.2f\n", kotol_p, KAPACITA_KOTLU, s->kotol.get_max(), s->kotol.get_avg());
+    Print("Scedovacia kad:   | %d | %d kg | %d | %.2f\n", s_kad_p, KAPACITA_S_KADE, s->s_kad.get_max(), s->s_kad.get_avg());
+    Print("Odstrediva kad:   | %d | %d kg | %d | %.2f\n", o_kad_p, KAPACITA_O_KADE, s->o_kad.get_max(), s->o_kad.get_avg());
+    Print("Mladinova panev:  | %d | %d kg | %d | %.2f\n", panev_p, KAPACITA_PANVE, s->panev.get_max(), s->panev.get_avg());
+    Print("Kvasny tank:      | %d | %d kg | %d | %.2f\n", kv_tank_p, KAPACITA_KV_TANKU, s->kv_tank.get_max(), s->kv_tank.get_avg());
+    Print("Leziacky tank:    | %d | %d kg | %d | %.2f\n---\n", lz_tank_p, KAPACITA_LZ_TANKU, s->lz_tank.get_max(), s->lz_tank.get_avg());
+    Print("### Vstupne suroviny:\n");
     Print("Surovina | Hmotnost\n");
     Print(":--- | ---:\n");
     Print("Slad:  | %d kg\n", slad);
     Print("Chmel: | %.2f kg\n---\n", init_chmel);
-    Print("## Spotrebované suroviny: \n");
+    if(neni_chmel) {
+        Print("**Vyskytol sa nedostatok chmelu**\n");
+    }
+    Print("### Spotrebované suroviny: \n");
     Print("Surovina | Hmotnost\n");
     Print(":--- | ---:\n");
     Print("Slad:  | %d kg\n", slad - start->m);
     Print("Chmel: | %.2f kg\n", (double)init_chmel - chmel);
     Print("Voda:     | %d l\n", voda);
     Print("Kvasnice: | %d l\n---\n", kvasnice);
-    Print("## Medziprodukty a odpad: \n");
+    Print("### Medziprodukty a odpad: \n");
     Print("Typ | Hmotnost\n");
     Print(":--- | ---:\n");
     Print("Mlato:                | %d kg\n", mlato);
     Print("Kal:                  | %d kg\n", kal);
-    Print("Pokazeý slad:         | %d kg\n", zly_slad);
+    Print("Pokazeny slad:         | %d kg\n", zly_slad);
     Print("Kontaminovane pivo:   | %d l\n---\n", kontam_pivo);
-    Print("## Vyrobené pivo:\n");
+    Print("### Vyrobene pivo:\n");
     Print("Typ | Hmotnost\n");
     Print(":--- | ---:\n");
     Print("Vycap 10:  | %d l\n",leziak10);
     Print("Leziak 12: | %d l\n",leziak12);
+    Print("#### Posledna varka: %03d. den, %02d:%02d\n---\n" ,((int)cas_vyroby/1440), ((int)cas_vyroby/60)%24, ((int)cas_vyroby)%60);
+    Print("\n## Programove statistiky:\n~~~\n");
     
-    //free(vystup.c_str());
+    Mlyn.Output();
+    Kotol.Output();
+    S_kad.Output();
+    O_kad.Output();
+    Panev.Output();
+    KV_tank.Output();
+    LZ_tank.Output();
+
+    Print("~~~");
 
     return 0;
 }
