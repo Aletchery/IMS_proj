@@ -358,10 +358,11 @@ int main(int argc, char *argv[])//int argc, char const *argv[])
     Print("Surovina | Hmotnost\n");
     Print(":--- | ---:\n");
     Print("Slad:  | %d kg\n", slad);
-    Print("Chmel: | %.2f kg\n---\n", init_chmel);
+    Print("Chmel: | %.2f kg\n", init_chmel);
     if(neni_chmel) {
-        Print("**Vyskytol sa nedostatok chmelu**\n");
+        Print("#### **Vyskytol sa nedostatok chmelu**\n");
     }
+    Print("---\n");
     Print("### Spotrebované suroviny: \n");
     Print("Surovina | Mnozstvo\n");
     Print(":--- | ---:\n");

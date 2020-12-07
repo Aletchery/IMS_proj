@@ -14,4 +14,4 @@ run: build
 	./ims -o zdvojansobenie.md -t "Experiment 2: Zdvojnasobenie" -s 2400 -c 60 -K 2 -k 10 -l 12
 
 clean:
-	rm -f ims
+	rm -f ims *.md
