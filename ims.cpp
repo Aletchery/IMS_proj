@@ -341,16 +341,16 @@ int main(int argc, char *argv[])//int argc, char const *argv[])
     Run();
 
     Print("# Vysledky:\n");
-    Print("## Pocet zariadeni a ich kapacita v kg:\n");
-    Print("Zariadenie | Pocet | Kapacita\n");
-    Print(":--- | :---: | ---:\n");
-    Print("Mlyn:             | %d | %d kg\n", mlyn_p, KAPACITA_MLYNU);
-    Print("Varný kotol:      | %d | %d kg\n", kotol_p, KAPACITA_KOTLU);
-    Print("Scedovacia kad:   | %d | %d kg\n", s_kad_p, KAPACITA_S_KADE);
-    Print("Odstrediva kad:   | %d | %d kg\n", o_kad_p, KAPACITA_O_KADE);
-    Print("Mladinova panev:  | %d | %d kg\n", panev_p, KAPACITA_PANVE);
-    Print("Kvasny tank:      | %d | %d kg\n", kv_tank_p, KAPACITA_KV_TANKU);
-    Print("Leziacky tank:    | %d | %d kg\n---\n", lz_tank_p, KAPACITA_LZ_TANKU);
+    Print("## Informacie o zariadeniach:\n");
+    Print("Zariadenie | Pocet | Kapacita | Rada\n");
+    Print(":--- | :---: | :---: | ---:\n");
+    Print("Mlyn:             | %d | %d kg | %d\n", mlyn_p, KAPACITA_MLYNU, Mlyn.QueueLen());
+    Print("Varný kotol:      | %d | %d kg | %d\n", kotol_p, KAPACITA_KOTLU, Kotol.QueueLen());
+    Print("Scedovacia kad:   | %d | %d kg | %d\n", s_kad_p, KAPACITA_S_KADE, S_kad.QueueLen());
+    Print("Odstrediva kad:   | %d | %d kg | %d\n", o_kad_p, KAPACITA_O_KADE, O_kad.QueueLen());
+    Print("Mladinova panev:  | %d | %d kg | %d\n", panev_p, KAPACITA_PANVE, Panev.QueueLen());
+    Print("Kvasny tank:      | %d | %d kg | %d\n", kv_tank_p, KAPACITA_KV_TANKU, KV_tank.QueueLen());
+    Print("Leziacky tank:    | %d | %d kg | %d\n---\n", lz_tank_p, KAPACITA_LZ_TANKU, LZ_tank.QueueLen());
     Print("## Vstupne suroviny:\n");
     Print("Surovina | Hmotnost\n");
     Print(":--- | ---:\n");
