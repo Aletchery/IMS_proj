@@ -360,7 +360,7 @@ int main(int argc, char *argv[])//int argc, char const *argv[])
     Print("Surovina | Hmotnost\n");
     Print(":--- | ---:\n");
     Print("Slad:  | %d kg\n", slad - start->m);
-    Print("Chmel: | %.2f kg\n", init_chmel - chmel);
+    Print("Chmel: | %.2f kg\n", (double)init_chmel - chmel);
     Print("Voda:     | %d l\n", voda);
     Print("Kvasnice: | %d l\n---\n", kvasnice);
     Print("## Medziprodukty a odpad: \n");
@@ -369,7 +369,7 @@ int main(int argc, char *argv[])//int argc, char const *argv[])
     Print("Mlato:                | %d kg\n", mlato);
     Print("Kal:                  | %d kg\n", kal);
     Print("Pokazeý slad:         | %d kg\n", zly_slad);
-    Print("Kontaminovane pivo:   | %d kg\n---\n", kontam_pivo);
+    Print("Kontaminovane pivo:   | %d l\n---\n", kontam_pivo);
     Print("## Vyrobené pivo:\n");
     Print("Typ | Hmotnost\n");
     Print(":--- | ---:\n");
