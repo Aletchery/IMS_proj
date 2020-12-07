@@ -80,8 +80,8 @@ void log(const char* msg) {
 }
 
 
-class ZelenePivo : public Process {
-    public : ZelenePivo() : Process(7) {}
+class Lezanie : public Process {
+    public : Lezanie() : Process(7) {}
     bool robim;
 
     /* m = 600 kg */
@@ -91,9 +91,9 @@ class ZelenePivo : public Process {
         robim = typ10;
         typ10 = !typ10;     // zmena vyroby
         if(robim) {
-            Wait(10 TYZ);
+            Wait(Uniform(30 DEN, 40 DEN));
         } else {
-            Wait(12 TYZ);
+            Wait(Uniform(10 TYZ, 12 TYZ));
         }
 
         if(Random() <= SANCA_NA_KONTAMINACIU) {
@@ -114,8 +114,8 @@ class ZelenePivo : public Process {
     
 };
 
-class KvasnaMladina : public Process {
-    public : KvasnaMladina() : Process(6) {}
+class Kvasenie : public Process {
+    public : Kvasenie() : Process(6) {}
     
     /* m = 200 kg */
     void Behavior() {
@@ -135,15 +135,15 @@ class KvasnaMladina : public Process {
         printf("Z_PIVO: %d\n", z_pivo);
         while(z_pivo >= 600) {
             z_pivo -= 600;
-            (new ZelenePivo)->Activate();
+            (new Lezanie)->Activate();
         }
         
         Leave(KV_tank, 200);
     }
 };
 
-class Mladina : public Process {
-    public : Mladina() : Process(5) {}
+class Chladenie : public Process {
+    public : Chladenie() : Process(5) {}
     
     /* m = 680 kg */
     void Behavior() {
@@ -161,35 +161,35 @@ class Mladina : public Process {
         /* rozdel vytvorenu mladinu na diely do tankov*/
         while(mladina >= 200) {
             mladina -= 200;
-            (new KvasnaMladina)->Activate();
+            (new Kvasenie)->Activate();
         }
 
         Leave(O_kad, 680);
     }
 };
 
-class Sladina : public Process {
-    public : Sladina() : Process(4) {}
+class Chmelovar : public Process {
+    public : Chmelovar() : Process(4) {}
     
     /* m = 680 kg */
     void Behavior() {
-        log("Sladina");
+        log("Chmelovar");
         chmel -= 1.36;
         Enter(Panev, 680);
 
         Wait(2.5 HOD);
-        (new Mladina)->Activate();
+        (new Chladenie)->Activate();
         log("   vytvoril Mladinu");
         Leave(Panev, 680);
     }
 };
 
-class Rmut : public Process {
-    public : Rmut() : Process(3) {}
+class Scedzovanie : public Process {
+    public : Scedzovanie() : Process(3) {}
     
     /* m = 800 kg */
     void Behavior() {
-        log("Rmut");
+        log("Scedzovanie");
         /* ochladenie */
         Wait(30 MIN);
 
@@ -198,23 +198,23 @@ class Rmut : public Process {
 
         Wait(3.5 HOD);
         mlato += 120;
-        (new Sladina)->Activate();  // 680 kg
+        (new Chmelovar)->Activate();  // 680 kg
         log("   vytvoril Sladinu");
         Leave(S_kad, 800);
     }
 };
 
-class Vystierka : public Process {
-    public : Vystierka() : Process(2) {}
+class Rmutovanie : public Process {
+    public : Rmutovanie() : Process(2) {}
     
     /* m = 800 kg */
     void Behavior() {
-        log("Vystierka");
+        log("Rmutovanie");
         Enter(Kotol, 800);
 
-        Wait(5 HOD);
-        (new Rmut)->Activate();
-        log("   vytvoril Rmut");
+        Wait(Uniform(5 HOD,5.5 HOD));
+        (new Scedzovanie)->Activate();
+        log("   vytvoril Scedzovanie");
         Leave(Kotol, 800);
     }
 };
@@ -245,7 +245,7 @@ class Slad : public Process {
         }
 
         Wait(15 MIN);
-        (new Vystierka)->Activate();
+        (new Rmutovanie)->Activate();
         log("   vytvoril Vystierku");
 
         Leave(Kotol, 800);
@@ -335,7 +335,7 @@ int main(int argc, char *argv[])//int argc, char const *argv[])
     Print("Leziak 10: %dl\n",leziak10);
     Print("Leziak 12: %dl\n",leziak12);
     Print("Mlato: %dkg\n",mlato);
-    Print("Spotreba vody: %dkg\n",voda);
+    Print("Spotreba vody: %dl\n",voda);
     Print("Pokazeny slad: %dkg\n",zly_slad);
     //free(vystup.c_str());
 
